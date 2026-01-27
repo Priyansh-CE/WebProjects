@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Love Meter ❤️</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            font-family: Arial;
+            background: linear-gradient(135deg, #ff4e8a, #ff9a9e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .box {
+            background: rgba(255,255,255,0.2);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            width: 300px;
+        }
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 10px;
+            border: none;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: #ff0055;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Love Meter ❤️</h1>
+    <input id="name1" placeholder="Your Name">
+    <input id="name2" placeholder="Partner Name">
+    <br>
+    <button onclick="submitLove()">Check Love</button>
+    <div id="result"></div>
+</div>
+
+<script>
+function submitLove() {
+    let n1 = document.getElementById("name1").value.trim();
+    let n2 = document.getElementById("name2").value.trim();
+    let result = document.getElementById("result");
+
+    if (!n1 || !n2) {
+        result.innerHTML = "Please enter both names!";
+        return;
+    }
+
+    // RANDOM LOVE %
+    let percent = Math.floor(Math.random() * 101);
+    let message = percent > 50 ? "Lots of love! 😊" : "Needs more love ☕❤️";
+
+    // SPECIAL CASE: Priyansh & Yashvi
+    if (
+        (n1.toLowerCase() === "priyansh" && n2.toLowerCase() === "yashvi") ||
+        (n1.toLowerCase() === "yashvi" && n2.toLowerCase() === "priyansh")
+    ) {
+        percent = 0;
+        message = "Yashvi, tumhe aur love karne ki jarurat hai 😌❤️";
+    }
+
+    // SHOW RESULT
+    result.innerHTML = `
+        <b>${n1} ❤️ ${n2}</b><br>
+        Love = ${percent}%<br>
+        ${message}
+    `;
+
+    // SEND DATA TO GOOGLE FORM
+    let url = "https://docs.google.com/forms/d/e/1FAIpQLSe27HCrIfy0--HodZHFSI8xXV_U6HdVWWoJB0Kw3uu3jva3AQ/formResponse?" +
+              "entry.1345210278=" + encodeURIComponent(n1) +
+              "&entry.1620448554=" + encodeURIComponent(n2);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.send();
+}
+</script>
+
+</body>
+</html>
