@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Expense Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    body{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);margin:0;padding:0;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding-top:20px;}
+    .box{background:white;padding:20px;border-radius:15px;width:95%;max-width:520px;box-shadow:0 15px 40px rgba(0,0,0,0.2);margin-bottom:20px;}
+    input,select,button{width:90%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ddd;}
+    button{cursor:pointer;border:none;color:white;}
+    .danger{background:#ff4d4d;}
+    ul{list-style:none;padding:0;margin-top:10px;}
+    li{display:flex;justify-content:space-between;align-items:center;padding:10px;margin:6px 0;border-radius:8px;color:white;position:relative;}
+    .Expense{background:#f0c419;color:#333;}
+    .Borrowed{background:#ff4d4d;}
+    .Lent{background:#3ac569;}
+    .overdue::after{content:'⚠ Overdue';position:absolute;right:10px;top:10px;font-size:12px;color:#fff;}
+    .budget-warning{border:2px solid red;}
+    .record-buttons button{margin-left:5px;padding:4px 8px;border-radius:5px;font-size:12px;}
+    .totals{display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;flex-wrap:wrap;}
+    .filter-bar input,.filter-bar select{width:45%;display:inline-block;margin-right:5%;}
+    canvas{max-width:100%;margin-top:20px;}
+    h4{margin:10px 0 5px 0;}
+  </style>
+</head>
+<body>
+
+<div class="box" id="authBox">
+  <h2>Smart Expense Tracker</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <br>
+  <button style="background:#667eea;" onclick="login()">Login</button>
+  <button style="background:#764ba2;" onclick="signup()">Signup</button>
+</div>
+
+<div class="box" id="appBox" style="display:none">
+  <h2>My Expenses</h2>
+  <button class="danger" onclick="logout()">Logout</button>
+
+  <h3>Add Expense</h3>
+  <input id="amount" type="number" placeholder="Amount">
+  <select id="category">
+    <option>Food</option><option>Travel</option><option>Shopping</option>
+    <option>Bills</option><option>Entertainment</option><option>Education</option>
+    <option>Medical</option><option>Other</option>
+  </select>
+  <input id="desc" placeholder="Description">
+  <label><input type="checkbox" id="recurring"> Recurring monthly</label>
+  <button style="background:#f0c419;color:#333;" onclick="addExpense()">Add Expense</button>
+
+  <h3>Set Budget (per category per month)</h3>
+  <input id="budgetCategory" placeholder="Category">
+  <input id="budgetAmount" type="number" placeholder="Amount">
+  <button style="background:#ff9800;" onclick="setBudget()">Set Budget</button>
+
+  <h3>Borrow / Lend</h3>
+  <input id="person" placeholder="Person name">
+  <input id="borrowAmount" type="number" placeholder="Amount">
+  <select id="type">
+    <option value="Borrowed">Borrowed</option>
+    <option value="Lent">Lent</option>
+  </select>
+  <button style="background:#3ac569;" onclick="addBorrow()">Add Borrow</button>
+
+  <div class="filter-bar">
+    <input id="searchInput" placeholder="Search by desc/person" oninput="applyFilters()">
+    <select id="filterType" onchange="applyFilters()">
+      <option value="">All Types</option>
+      <option value="Expense">Expense</option>
+      <option value="Borrowed">Borrowed</option>
+      <option value="Lent">Lent</option>
+    </select>
+  </div>
+
+  <div class="totals" id="totals"></div>
+  <ul id="list"></ul>
+
+  <h4>Expenses by Category</h4>
+  <canvas id="pieChart"></canvas>
+  <h4>Monthly Expense Summary</h4>
+  <canvas id="barChart"></canvas>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBzeoHdMFZwdR2W3FAQxoGBs6rjVinL9so",
+  authDomain: "to-do-app-10cf3.firebaseapp.com",
+  projectId: "to-do-app-10cf3"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let userId=null;
+
+const authBox=document.getElementById("authBox");
+const appBox=document.getElementById("appBox");
+const list=document.getElementById("list");
+const totalsDiv=document.getElementById("totals");
+const searchInput=document.getElementById("searchInput");
+const filterType=document.getElementById("filterType");
+
+let recordsData=[];
+let budgets={};
+
+auth.onAuthStateChanged(user=>{
+  if(user){userId=user.uid; authBox.style.display="none"; appBox.style.display="block"; loadData();}
+  else{authBox.style.display="block"; appBox.style.display="none";}
+});
+
+function signup(){if(!email.value||!password.value)return alert("Enter email & password"); auth.createUserWithEmailAndPassword(email.value,password.value).catch(e=>alert(e.message));}
+function login(){if(!email.value||!password.value)return alert("Enter email & password"); auth.signInWithEmailAndPassword(email.value,password.value).catch(e=>alert(e.message));}
+function logout(){auth.signOut(); location.reload();}
+
+function addExpense(){if(!amount.value||!desc.value)return alert("Enter amount & description");
+db.collection("records").add({userId,type:"Expense",amount:parseFloat(amount.value),category:category.value,desc:desc.value,recurring:document.getElementById("recurring").checked,date:new Date().toISOString()});
+amount.value=""; desc.value=""; document.getElementById("recurring").checked=false;}
+
+function addBorrow(){if(!borrowAmount.value||!person.value)return alert("Enter amount & person");
+db.collection("records").add({userId,type:type.value,amount:parseFloat(borrowAmount.value),person:person.value,status:"Unpaid",date:new Date().toISOString()});
+borrowAmount.value=""; person.value="";}
+
+function setBudget(){if(!budgetCategory.value||!budgetAmount.value)return alert("Enter category & amount"); budgets[budgetCategory.value]=parseFloat(budgetAmount.value); budgetCategory.value=""; budgetAmount.value=""; applyFilters();}
+
+function loadData(){db.collection("records").where("userId","==",userId).onSnapshot(snapshot=>{recordsData=[]; snapshot.forEach(doc=>{let d=doc.data(); d.id=doc.id; recordsData.push(d);}); applyFilters(); drawCharts();});}
+
+function applyFilters(){
+  let searchVal=searchInput.value.toLowerCase(); let typeVal=filterType.value;
+  list.innerHTML=""; let totalExpense=0,totalBorrow=0,totalLent=0; let monthlyTotals={};
+  recordsData.forEach(d=>{
+    if(typeVal && d.type!==typeVal) return;
+    if(d.type==="Expense" && !d.desc.toLowerCase().includes(searchVal)) return;
+    if((d.type==="Borrowed"||d.type==="Lent") && !d.person.toLowerCase().includes(searchVal)) return;
+
+    let li=document.createElement("li"); li.className=d.type; 
+    let text=""; 
+    if(d.type==="Expense"){ totalExpense+=d.amount; text=`💸 ${d.category} - ₹${d.amount} <br><small>${d.desc}</small>`;
+      let m=new Date(d.date).toLocaleString('default',{month:'short',year:'numeric'});
+      if(!monthlyTotals[d.category]) monthlyTotals[d.category]=0; monthlyTotals[d.category]+=d.amount;
+      if(budgets[d.category] && monthlyTotals[d.category]>budgets[d.category]) li.classList.add("budget-warning");
+    } else {
+      if(d.type==="Borrowed") totalBorrow+=d.amount; else totalLent+=d.amount; 
+      text=`🤝 ${d.type} ₹${d.amount} with ${d.person} [${d.status}]`;
+      let recordDate=new Date(d.date); let now=new Date();
+      let diffDays=Math.floor((now-recordDate)/(1000*60*60*24));
+      if(d.type==="Borrowed" && d.status==="Unpaid" && diffDays>7) li.classList.add("overdue");
+    }
+    li.innerHTML=text;
+
+    let btns=document.createElement("span"); btns.classList.add("record-buttons");
+    let editBtn=document.createElement("button"); editBtn.textContent="✏️"; if(d.type==="Expense") editBtn.onclick=()=>editRecord(d); else editBtn.onclick=()=>editBorrow(d);
+    let delBtn=document.createElement("button"); delBtn.textContent="❌"; delBtn.onclick=()=>deleteRecord(d.id);
+    if(d.type!=="Expense"){let toggleBtn=document.createElement("button"); toggleBtn.textContent="✅"; toggleBtn.onclick=()=>toggleStatus(d); btns.appendChild(toggleBtn);}
+    btns.appendChild(editBtn); btns.appendChild(delBtn); li.appendChild(btns);
+
+    list.appendChild(li);
+  });
+  totalsDiv.innerHTML=`💸 Expense: ₹${totalExpense} | 🔴 Borrowed: ₹${totalBorrow} | 🟢 Lent: ₹${totalLent}`;
+}
+
+function deleteRecord(id){if(confirm("Delete record?")) db.collection("records").doc(id).delete();}
+function editRecord(d){let amt=prompt("New amount:",d.amount); let descNew=prompt("New description:",d.desc); if(amt&&descNew) db.collection("records").doc(d.id).update({amount:parseFloat(amt),desc:descNew});}
+function editBorrow(d){let amt=prompt("New amount:",d.amount); let personNew=prompt("New person:",d.person); if(amt&&personNew) db.collection("records").doc(d.id).update({amount:parseFloat(amt),person:personNew});}
+function toggleStatus(d){let newStatus=d.status==="Paid"?"Unpaid":"Paid"; db.collection("records").doc(d.id).update({status:newStatus});}
+
+function drawCharts(){
+  const pieCtx=document.getElementById("pieChart").getContext("2d"); let catTotals={};
+  recordsData.filter(d=>d.type==="Expense").forEach(d=>{if(!catTotals[d.category]) catTotals[d.category]=0; catTotals[d.category]+=d.amount;});
+  new Chart(pieCtx,{type:"pie",data:{labels:Object.keys(catTotals),datasets:[{data:Object.values(catTotals),backgroundColor:["#f0c419","#3ac569","#ff4d4d","#667eea","#764ba2","#ff9a9e","#00bcd4","#ff9800"]}]},options:{responsive:true,plugins:{legend:{position:"bottom"}}}});
+
+  const barCtx=document.getElementById("barChart").getContext("2d"); let monthTotals={};
+  recordsData.filter(d=>d.type==="Expense").forEach(d=>{
+    let m=new Date(d.date).toLocaleString('default',{month:'short',year:'numeric'}); if(!monthTotals[m]) monthTotals[m]=0; monthTotals[m]+=d.amount;
+    if(d.recurring){let now=new Date(); let expenseDate=new Date(d.date); while(expenseDate<now){expenseDate.setMonth(expenseDate.getMonth()+1); let key=expenseDate.toLocaleString('default',{month:'short',year:'numeric'}); if(!monthTotals[key]) monthTotals[key]=0; monthTotals[key]+=d.amount;}}
+  });
+  new Chart(barCtx,{type:"bar",data:{labels:Object.keys(monthTotals),datasets:[{label:"Monthly Expenses",data:Object.values(monthTotals),backgroundColor:"#f0c419"}]},options:{responsive:true,plugins:{legend:{display:false}}}});
+}
+
+// Register service worker for PWA
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').then(reg=>{
+      console.log('Service Worker Registered', reg);
+    }).catch(err=>{
+      console.log('Service Worker Failed', err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
