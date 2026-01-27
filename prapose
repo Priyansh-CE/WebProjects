@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>For Yashvi 💍</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #ff6a88, #ff99ac, #ffd1dc);
+      animation: bgMove 8s infinite alternate;
+    }
+
+    @keyframes bgMove {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(30deg); }
+    }
+
+    img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 5px solid white;
+      box-shadow: 0 0 30px #ff3366;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 3em;
+      color: white;
+      text-shadow: 0 0 20px #ff3366;
+      margin-bottom: 10px;
+      animation: heartbeat 1s infinite;
+    }
+
+    @keyframes heartbeat {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    p {
+      color: white;
+      font-size: 1.3em;
+      margin-bottom: 25px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 30px;
+    }
+
+    button {
+      padding: 15px 40px;
+      font-size: 20px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #yesBtn {
+      background: #00e676;
+      color: white;
+      box-shadow: 0 0 20px #00e676;
+    }
+
+    #noBtn {
+      background: #ff1744;
+      color: white;
+      box-shadow: 0 0 20px #ff1744;
+    }
+
+    button:hover {
+      transform: scale(1.2);
+    }
+
+    .heart {
+      width: 20px;
+      height: 20px;
+      background: red;
+      position: absolute;
+      transform: rotate(-45deg);
+      animation: fall linear infinite;
+    }
+
+    .heart::before,
+    .heart::after {
+      content: "";
+      width: 20px;
+      height: 20px;
+      background: red;
+      border-radius: 50%;
+      position: absolute;
+    }
+
+    .heart::before { top: -10px; left: 0; }
+    .heart::after { left: 10px; top: 0; }
+
+    @keyframes fall {
+      0% { top: -10%; opacity: 1; }
+      100% { top: 110%; opacity: 0; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Your photo -->
+  <img src="photo.jpg" alt="Us">
+
+  <!-- Her name -->
+  <h1 id="question">Yashvi, will you be my wife? 💍</h1>
+
+  <p id="message">
+    From today, my future starts with you ❤️
+  </p>
+
+  <div class="buttons">
+    <button id="yesBtn">YES 😍</button>
+    <button id="noBtn">NO 🙄</button>
+  </div>
+
+  <audio autoplay loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3">
+  </audio>
+
+  <script>
+    let noCount = 0;
+
+    const noBtn = document.getElementById("noBtn");
+    const yesBtn = document.getElementById("yesBtn");
+    const message = document.getElementById("message");
+
+    noBtn.addEventListener("click", () => {
+      noCount++;
+
+      if (noCount === 1) {
+        message.innerText = "Are you sure, Yashvi? Think again 😢";
+      } 
+      else if (noCount === 2) {
+        message.innerText = "Last chance... my heart is breaking 💔";
+        noBtn.style.display = "none"; // NO disappears
+      }
+    });
+
+    yesBtn.addEventListener("click", () => {
+      document.body.innerHTML = `
+        <h1>YAY!!! SHE SAID YES 😭💖</h1>
+        <p>Yashvi, you are now officially my WIFE 💍</p>
+        <h2>I love you forever ♾️</h2>
+      `;
+      document.body.style.background =
+        "linear-gradient(135deg, #ff4d6d, #ff8fab)";
+    });
+
+    // Falling hearts
+    setInterval(() => {
+      const heart = document.createElement("div");
+      heart.className = "heart";
+      heart.style.left = Math.random() * window.innerWidth + "px";
+      heart.style.animationDuration = (2 + Math.random() * 3) + "s";
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), 5000);
+    }, 200);
+  </script>
+
+</body>
+</html>
