@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Task Manager – Stage 5</title>
+  <style>
+    body { font-family: Arial; background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; transition: background 0.3s,color 0.3s;}
+    body.dark{background:#1e1e2f;color:white;}
+    .box{background:linear-gradient(135deg,#43e97b,#38f9d7);padding:20px;border-radius:10px;width:380px;text-align:center;color:#1e1e2f;transition:background 0.3s,color 0.3s;}
+    body.dark .box{color:white;background:linear-gradient(135deg,#2b2b3c,#44445a);}
+    input,select{width:78%;padding:6px;margin:4px 0;border-radius:5px;border:1px solid #333;transition:background 0.3s,color 0.3s;}
+    body.dark input,body.dark select{color:white;background:#333;border:1px solid #fff;}
+    button{padding:5px 10px;margin:3px;border:none;border-radius:5px;cursor:pointer;transition:transform 0.2s;}
+    button:hover{transform:scale(1.1);}
+    li{display:flex;justify-content:space-between;align-items:center;padding:2px 4px;margin-top:8px;cursor:pointer;transition:background 0.3s;}
+    li.completed{text-decoration:line-through;color:gray;}
+    li.overdue{color:red;font-weight:bold;}
+    .counter{margin-top:8px;font-size:14px;}
+    .filter-btns button{padding:5px 10px;margin:2px;}
+    #darkToggle{margin-top:10px;background:#222;color:white;}
+  </style>
+</head>
+<body>
+
+<div class="box" id="authBox">
+  <h2>Login / Signup</h2>
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="signup()">Signup</button>
+  <button onclick="login()">Login</button>
+  <p id="authMsg"></p>
+</div>
+
+<div class="box" id="appBox" style="display:none;">
+  <h2>Task Manager</h2>
+  <input id="taskInput" placeholder="Enter task"><br>
+  <select id="categorySelect">
+    <option value="Work">Work</option>
+    <option value="Study">Study</option>
+    <option value="Personal">Personal</option>
+  </select><br>
+  <input type="date" id="dueDate"><br>
+  <button onclick="addTask()">Add Task</button>
+  <div><input id="searchInput" placeholder="Search tasks..." oninput="renderTasks()"></div>
+  <div class="filter-btns">
+    <button onclick="setFilter('all')">All</button>
+    <button onclick="setFilter('completed')">Completed</button>
+    <button onclick="setFilter('pending')">Pending</button>
+  </div>
+  <ul id="taskList"></ul>
+  <div class="counter" id="counter"></div>
+  <button id="darkToggle" onclick="toggleDark()">Toggle Dark Mode</button>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ✅ Stage 5 Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyBzeoHdMFZwdR2W3FAQxoGBs6rjVinL9so",
+  authDomain: "to-do-app-10cf3.firebaseapp.com",
+  projectId: "to-do-app-10cf3",
+  storageBucket: "to-do-app-10cf3.firebasestorage.app",
+  messagingSenderId: "596651626603",
+  appId: "1:596651626603:web:67aeaa43b4899adc2ca12e",
+  measurementId: "G-FLJ875KLVB"
+};
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let userId = null;
+let tasks = [];
+let filter = "all";
+
+// --- Auth ---
+function signup(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email,password)
+    .then(res => {userId = res.user.uid; showApp();})
+    .catch(err => document.getElementById("authMsg").innerText = err.message);
+}
+
+function login(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email,password)
+    .then(res => {userId = res.user.uid; showApp();})
+    .catch(err => document.getElementById("authMsg").innerText = err.message);
+}
+
+function logout(){
+  auth.signOut().then(()=>{userId=null; tasks=[]; document.getElementById("appBox").style.display="none"; document.getElementById("authBox").style.display="block";});
+}
+
+// --- Show App ---
+function showApp(){
+  document.getElementById("authBox").style.display="none";
+  document.getElementById("appBox").style.display="block";
+  loadTasks();
+}
+
+// --- Task CRUD ---
+function loadTasks(){
+  db.collection("users").doc(userId).collection("tasks")
+    .orderBy("dueDate")
+    .onSnapshot(snapshot=>{
+      tasks = [];
+      snapshot.forEach(doc=>tasks.push({...doc.data(),id:doc.id}));
+      renderTasks();
+    });
+}
+
+function renderTasks(){
+  const list = document.getElementById("taskList");
+  list.innerHTML="";
+  const searchText = document.getElementById("searchInput").value.toLowerCase();
+  const today = new Date().toISOString().split("T")[0];
+  let completedCount=0;
+
+  tasks.forEach((task,index)=>{
+    if(filter==="completed" && !task.completed) return;
+    if(filter==="pending" && task.completed) return;
+    if(!task.text.toLowerCase().includes(searchText)) return;
+
+    const li = document.createElement("li");
+    li.innerText=`[${task.category}] ${task.text} (${task.dueDate||"No date"})`;
+    if(task.category==="Work") li.style.color="blue";
+    if(task.category==="Study") li.style.color="green";
+    if(task.category==="Personal") li.style.color="purple";
+
+    if(task.completed){ li.classList.add("completed"); completedCount++; }
+    else if(task.dueDate && task.dueDate<today) li.classList.add("overdue");
+
+    li.onclick=function(){
+      db.collection("users").doc(userId).collection("tasks").doc(task.id).update({completed:!task.completed});
+    }
+
+    // Edit
+    const editBtn=document.createElement("button");
+    editBtn.innerText="✏️";
+    editBtn.onclick=function(e){
+      e.stopPropagation();
+      const newText=prompt("Edit task:",task.text);
+      if(newText) db.collection("users").doc(userId).collection("tasks").doc(task.id).update({text:newText});
+    }
+
+    // Delete
+    const delBtn=document.createElement("button");
+    delBtn.innerText="❌";
+    delBtn.onclick=function(e){
+      e.stopPropagation();
+      db.collection("users").doc(userId).collection("tasks").doc(task.id).delete();
+    }
+
+    li.appendChild(editBtn);
+    li.appendChild(delBtn);
+    list.appendChild(li);
+  });
+
+  document.getElementById("counter").innerText=`Total: ${tasks.length} | Completed: ${completedCount}`;
+}
+
+// --- Add Task ---
+function addTask(){
+  const text=document.getElementById("taskInput").value;
+  if(!text) return;
+  const category=document.getElementById("categorySelect").value;
+  const dueDate=document.getElementById("dueDate").value;
+
+  db.collection("users").doc(userId).collection("tasks").add({text,completed:false,category,dueDate});
+  document.getElementById("taskInput").value="";
+  document.getElementById("dueDate").value="";
+}
+
+// --- Filters & Dark Mode ---
+function setFilter(value){filter=value; renderTasks();}
+function toggleDark(){document.body.classList.toggle("dark");}
+
+</script>
+
+</body>
+</html>
