@@ -67,16 +67,7 @@ function submitLove() {
 
     // RANDOM LOVE %
     let percent = Math.floor(Math.random() * 101);
-    let message = percent > 50 ? "Lots of love! 😊" : "Needs more love ☕❤️";
-
-    // SPECIAL CASE: Priyansh & Yashvi
-    if (
-        (n1.toLowerCase() === "priyansh" && n2.toLowerCase() === "yashvi") ||
-        (n1.toLowerCase() === "yashvi" && n2.toLowerCase() === "priyansh")
-    ) {
-        percent = 0;
-        message = "Yashvi, tumhe aur love karne ki jarurat hai 😌❤️";
-    }
+    let message = percent > 50 ? "Lots of love! 😊❤️" : "Needs more love ☕❤️";
 
     // SHOW RESULT
     result.innerHTML = `
