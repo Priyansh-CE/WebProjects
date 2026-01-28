@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>For Yashvi 💍</title>
+  <title>For You 💍</title>
 
   <style>
     * {
@@ -119,11 +119,9 @@
 
 <body>
 
-  <!-- Your photo -->
   <img src="photo.jpg" alt="Us">
 
-  <!-- Her name -->
-  <h1 id="question">Yashvi, will you be my wife? 💍</h1>
+  <h1 id="question">Will you be my wife? 💍</h1>
 
   <p id="message">
     From today, my future starts with you ❤️
@@ -149,25 +147,24 @@
       noCount++;
 
       if (noCount === 1) {
-        message.innerText = "Are you sure, Yashvi? Think again 😢";
+        message.innerText = "Are you sure? Think again 😢";
       } 
       else if (noCount === 2) {
         message.innerText = "Last chance... my heart is breaking 💔";
-        noBtn.style.display = "none"; // NO disappears
+        noBtn.style.display = "none";
       }
     });
 
     yesBtn.addEventListener("click", () => {
       document.body.innerHTML = `
         <h1>YAY!!! SHE SAID YES 😭💖</h1>
-        <p>Yashvi, you are now officially my WIFE 💍</p>
+        <p>You are now officially my WIFE 💍</p>
         <h2>I love you forever ♾️</h2>
       `;
       document.body.style.background =
         "linear-gradient(135deg, #ff4d6d, #ff8fab)";
     });
 
-    // Falling hearts
     setInterval(() => {
       const heart = document.createElement("div");
       heart.className = "heart";
