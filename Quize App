@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ultimate Quiz App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style> 
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#667eea,#764ba2);transition:0.3s;}
+body.dark{background:linear-gradient(135deg,#1a202c,#2d3748)}
+.container{background:#fff;width:90%;max-width:520px;padding:25px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.2);text-align:center;transition:0.3s;}
+body.dark .container{background:#2d3748;color:#fff}
+.toggle{text-align:right;font-size:14px;cursor:pointer;margin-bottom:10px}
+#timer{color:#e53e3e;font-weight:bold;margin-bottom:10px;}
+#count{font-size:14px;margin:8px 0}
+.progress{height:12px;background:#e2e8f0;border-radius:10px;margin-bottom:15px;overflow:hidden;position:relative;}
+.progress-bar{height:100%;width:0%;background:#667eea;transition:width 0.4s;}
+body.dark .progress{background:#4a5568}
+.progress-text{position:absolute;right:5px;top:-2px;font-size:12px;color:#000;}
+body.dark .progress-text{color:#fff;}
+#question{font-size:18px;margin-bottom:15px}
+.options{display:flex;flex-direction:column;gap:10px}
+button{padding:12px;border:none;border-radius:8px;background:#667eea;color:white;font-size:16px;cursor:pointer;transition:0.3s}
+button:hover{opacity:0.9;box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+.correct{background:#48bb78!important}
+.wrong{background:#e53e3e!important}
+#nextBtn,#restartBtn,#muteBtn{margin-top:15px;display:none}
+.result{display:none;text-align:left;}
+.pass{color:#38a169}
+.fail{color:#e53e3e}
+#highScore{margin-top:10px;font-size:14px;color:#fff;text-align:right}
+body.dark #highScore{color:#fbd38d}
+#categorySelect{margin-bottom:15px;padding:10px;width:60%;border-radius:8px;border:1px solid #ddd;}
+.badge{display:inline-block;background:#f6ad55;color:#fff;padding:4px 8px;margin:4px;border-radius:6px;font-size:12px;}
+.review-answer{margin-bottom:8px;}
+.review-answer.correct{color:#48bb78;}
+.review-answer.wrong{color:#e53e3e;}
+@media(max-width:480px){#question{font-size:16px}button{font-size:14px;padding:10px}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="toggle" onclick="toggleMode()">🌙 Dark Mode</div>
+  <h1>Ultimate Quiz App</h1>
+
+  <select id="categorySelect" onchange="startBtn.disabled=false">
+    <option value="">Select Category</option>
+    <option value="GK">General Knowledge</option>
+    <option value="Sports">Sports</option>
+    <option value="Movies">Movies</option>
+  </select>
+
+  <button id="startBtn" onclick="startCategory()" disabled>Start Quiz</button>
+  <button id="muteBtn" onclick="toggleMute()">🔇 Mute</button>
+
+  <div id="quizBox" style="display:none">
+    <div id="count"></div>
+    <div class="progress">
+      <div id="progressBar" class="progress-bar"></div>
+      <div class="progress-text" id="progressText">0%</div>
+    </div>
+    <div id="timer">Time: 10s</div>
+    <div id="question"></div>
+
+    <div class="options">
+      <button class="option"></button>
+      <button class="option"></button>
+      <button class="option"></button>
+      <button class="option"></button>
+    </div>
+
+    <button id="nextBtn">Next</button>
+    <div id="highScore"></div>
+  </div>
+
+  <div id="resultBox" class="result">
+    <h2 id="resultText"></h2>
+    <p id="scoreText"></p>
+    <p id="highScoreResult"></p>
+    <div id="badges"></div>
+    <h4>Review Answers:</h4>
+    <div id="review"></div>
+    <button id="restartBtn">Restart Quiz</button>
+  </div>
+</div>
+
+<audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+
+<script>
+let allQuestions = [
+  // ===== GK 20 =====
+  {q:"Capital of France?", o:["Paris","London","Berlin","Madrid"], a:0, cat:"GK"},
+  {q:"Red Planet?", o:["Earth","Mars","Jupiter","Venus"], a:1, cat:"GK"},
+  {q:"Largest ocean?", o:["Atlantic","Indian","Arctic","Pacific"], a:3, cat:"GK"},
+  {q:"Father of Computers?", o:["Babbage","Turing","Jobs","Einstein"], a:0, cat:"GK"},
+  {q:"Boiling point of water?", o:["90","80","100","120"], a:2, cat:"GK"},
+  {q:"Currency of Japan?", o:["Yen","Dollar","Euro","Rupee"], a:0, cat:"GK"},
+  {q:"Fastest bird?", o:["Eagle","Falcon","Sparrow","Parrot"], a:1, cat:"GK"},
+  {q:"Light year measures?", o:["Time","Distance","Speed","Energy"], a:1, cat:"GK"},
+  {q:"H2O is?", o:["Oxygen","Hydrogen","Water","Helium"], a:2, cat:"GK"},
+  {q:"Largest desert?", o:["Sahara","Gobi","Thar","Kalahari"], a:0, cat:"GK"},
+  {q:"Mount Everest height?", o:["8848m","9000m","8000m","8500m"], a:0, cat:"GK"},
+  {q:"Atomic number of Oxygen?", o:["6","7","8","9"], a:2, cat:"GK"},
+  {q:"First man on moon?", o:["Armstrong","Aldrin","Gagarin","Collins"], a:0, cat:"GK"},
+  {q:"Sun rises in?", o:["West","East","North","South"], a:1, cat:"GK"},
+  {q:"Fastest land animal?", o:["Cheetah","Lion","Horse","Tiger"], a:0, cat:"GK"},
+  {q:"Largest planet?", o:["Mars","Earth","Jupiter","Saturn"], a:2, cat:"GK"},
+  {q:"Smallest country?", o:["Monaco","Vatican","Maldives","Nauru"], a:1, cat:"GK"},
+  {q:"Python is a?", o:["Snake","Programming","Car","Movie"], a:1, cat:"GK"},
+  {q:"Light travels in?", o:["Air","Water","Vacuum","Glass"], a:2, cat:"GK"},
+  {q:"The Great Wall is in?", o:["India","China","USA","Egypt"], a:1, cat:"GK"},
+  // ===== Sports 20 =====
+  {q:"Uses shuttlecock?", o:["Badminton","Tennis","Cricket","Squash"], a:0, cat:"Sports"},
+  {q:"Football players per team?", o:["11","9","7","12"], a:0, cat:"Sports"},
+  {q:"Host of 2016 Olympics?", o:["China","UK","Brazil","Japan"], a:2, cat:"Sports"},
+  {q:"Hat-trick term used in?", o:["Football","Cricket","Hockey","All"], a:3, cat:"Sports"},
+  {q:"Fastest land animal?", o:["Lion","Cheetah","Horse","Tiger"], a:1, cat:"Sports"},
+  {q:"Game with paddles and ball?", o:["Tennis","Ping Pong","Badminton","Squash"], a:1, cat:"Sports"},
+  {q:"Most World Cups cricket?", o:["India","Australia","Pakistan","England"], a:1, cat:"Sports"},
+  {q:"Olympics held every?", o:["2 years","3 years","4 years","5 years"], a:2, cat:"Sports"},
+  {q:"Basketball hoop height?", o:["3m","3.05m","2.9m","3.1m"], a:1, cat:"Sports"},
+  {q:"Longest tennis match?", o:["11h","10h","12h","9h"], a:0, cat:"Sports"},
+  {q:"First FIFA World Cup?", o:["1930","1928","1932","1934"], a:0, cat:"Sports"},
+  {q:"Baseball pitcher throws?", o:["Ball","Frisbee","Disc","Javelin"], a:0, cat:"Sports"},
+  {q:"Goalkeeper uses?", o:["Hands","Feet","Head","Legs"], a:0, cat:"Sports"},
+  {q:"Cricket field size measured in?", o:["Feet","Meters","Yards","Inches"], a:2, cat:"Sports"},
+  {q:"Fastest serve tennis?", o:["200km/h","250km/h","300km/h","350km/h"], a:1, cat:"Sports"},
+  {q:"Formula 1 car max speed?", o:["300km/h","320km/h","350km/h","400km/h"], a:2, cat:"Sports"},
+  {q:"Longest cricket match?", o:["5 days","4 days","6 days","3 days"], a:0, cat:"Sports"},
+  {q:"Rugby originated in?", o:["UK","USA","Australia","France"], a:0, cat:"Sports"},
+  {q:"Boxing rounds?", o:["3","12","10","15"], a:1, cat:"Sports"},
+  {q:"Golf uses?", o:["Ball","Bat","Stick","Racket"], a:0, cat:"Sports"},
+  // ===== Movies 20 =====
+  {q:"Directed Titanic?", o:["Cameron","Spielberg","Nolan","Scorsese"], a:0, cat:"Movies"},
+  {q:"Who played Iron Man?", o:["Hemsworth","Downey Jr.","Evans","Ruffalo"], a:1, cat:"Movies"},
+  {q:"Jack Sparrow actor?", o:["Depp","Bloom","Cruise","DiCaprio"], a:0, cat:"Movies"},
+  {q:"Line 'I am your father' movie?", o:["Star Wars","Star Trek","Matrix","Guardians"], a:0, cat:"Movies"},
+  {q:"Hogwarts featured in?", o:["Harry Potter","Percy Jackson","Twilight","LOTR"], a:0, cat:"Movies"},
+  {q:"Directed Inception?", o:["Nolan","Spielberg","Cameron","Tarantino"], a:0, cat:"Movies"},
+  {q:"Movie with King Kong?", o:["King Kong","Godzilla","Titanic","Jaws"], a:0, cat:"Movies"},
+  {q:"Actor of Joker?", o:["DiCaprio","Phoenix","Depp","Pitt"], a:1, cat:"Movies"},
+  {q:"Movie with infinity stones?", o:["Avengers","Iron Man","Thor","Spiderman"], a:0, cat:"Movies"},
+  {q:"Voice of Simba?", o:["Matthew Broderick","James Earl","Tom Hanks","Brad Pitt"], a:0, cat:"Movies"},
+  {q:"Director of Pulp Fiction?", o:["Tarantino","Cameron","Nolan","Spielberg"], a:0, cat:"Movies"},
+  {q:"Movie with Titanic scene?", o:["Titanic","Avatar","Inception","Interstellar"], a:0, cat:"Movies"},
+  {q:"Famous spy movie?", o:["James Bond","Mission Impossible","Jason Bourne","All"], a:3, cat:"Movies"},
+  {q:"First Harry Potter movie?", o:["Sorcerer's Stone","Chamber","Prisoner","Goblet"], a:0, cat:"Movies"},
+  {q:"Famous animation movie?", o:["Frozen","Cars","Shrek","Coco"], a:0, cat:"Movies"},
+  {q:"Movie with Hulk?", o:["Avengers","Iron Man","Thor","Batman"], a:0, cat:"Movies"},
+  {q:"Actor of Deadpool?", o:["Ryan Reynolds","Hugh Jackman","Chris Evans","Tom Hardy"], a:0, cat:"Movies"},
+  {q:"Movie with spaceship?", o:["Interstellar","Gravity","Avatar","Star Trek"], a:0, cat:"Movies"},
+  {q:"Directed Avatar?", o:["Cameron","Nolan","Spielberg","Tarantino"], a:0, cat:"Movies"},
+  {q:"Movie 'Matrix' starred?", o:["Keanu Reeves","Brad Pitt","Tom Cruise","Johnny Depp"], a:0, cat:"Movies"}
+];
+
+// -------- JS Logic (Same as before) --------
+let questions=[], i=0, score=0, time=10, timer, reviewData=[], muted=false;
+const q=document.getElementById("question");
+const opts=document.querySelectorAll(".option");
+const next=document.getElementById("nextBtn");
+const restart=document.getElementById("restartBtn");
+const timerEl=document.getElementById("timer");
+const count=document.getElementById("count");
+const bar=document.getElementById("progressBar");
+const progressText=document.getElementById("progressText");
+const quizBox=document.getElementById("quizBox");
+const resultBox=document.getElementById("resultBox");
+const resultText=document.getElementById("resultText");
+const scoreText=document.getElementById("scoreText");
+const highScoreDiv=document.getElementById("highScore");
+const highScoreResult=document.getElementById("highScoreResult");
+const categorySelect=document.getElementById("categorySelect");
+const badgesDiv=document.getElementById("badges");
+const reviewDiv=document.getElementById("review");
+const correctSound=document.getElementById("correctSound");
+const wrongSound=document.getElementById("wrongSound");
+const startBtn=document.getElementById("startBtn");
+const muteBtn=document.getElementById("muteBtn");
+
+let highScore=JSON.parse(localStorage.getItem("quizHighScore")) || {};
+highScoreDiv.innerText="High Score: "+(highScore[categorySelect.value]||0);
+
+function startCategory(){
+ let cat=categorySelect.value;
+ if(!cat) return alert("Select a category!");
+ questions=allQuestions.filter(q=>q.cat===cat);
+ questions.sort(()=>Math.random()-0.5);
+ startBtn.style.display="none";
+ categorySelect.style.display="none";
+ muteBtn.style.display="inline-block";
+ quizBox.style.display="block";
+ reviewData=[]; i=0; score=0;
+ load();
+ updateHighScore();
+}
+
+function load(){
+ reset();
+ startTimer();
+ count.innerText=`Question ${i+1} of ${questions.length}`;
+ bar.style.width=`${((i+1)/questions.length)*100}%`;
+ progressText.innerText=`${i+1}/${questions.length}`;
+
+ let options=[...questions[i].o];
+ let correct=options[questions[i].a];
+ options.sort(()=>Math.random()-0.5);
+
+ q.innerText=questions[i].q;
+	opts.forEach((b,idx)=>{b.innerText=options[idx]; b.onclick=()=>check(options[idx],correct,b);});
+}
+
+function check(selected,correct,btn){
+ stopTimer();
+ opts.forEach(b=>b.disabled=true);
+ if(selected===correct){ btn.classList.add("correct"); score++; if(!muted) correctSound.play(); }
+ else{ btn.classList.add("wrong"); opts.forEach(b=>{if(b.innerText===correct)b.classList.add("correct")}); if(!muted) wrongSound.play();}
+ reviewData.push({question:questions[i].q,selected,correct});
+ next.style.display="block";
+}
+
+function startTimer(){
+ time=10;
+ timerEl.innerText=`Time: ${time}s`;
+ timer=setInterval(()=>{ time--; timerEl.innerText=`Time: ${time}s`; if(time===0){stopTimer(); autoFail();}},1000);
+}
+
+function stopTimer(){clearInterval(timer);}
+function autoFail(){
+ opts.forEach(b=>b.disabled=true);
+ opts.forEach(b=>{if(b.innerText===questions[i].o[questions[i].a])b.classList.add("correct");});
+ reviewData.push({question:questions[i].q,selected:"No Answer",correct:questions[i].o[questions[i].a]});
+ next.style.display="block";
+}
+
+function reset(){next.style.display="none"; opts.forEach(b=>{b.disabled=false;b.className="option";});}
+
+next.onclick=()=>{ i++; if(i<questions.length) load(); else showResult(); };
+
+function showResult(){
+ quizBox.style.display="none";
+ resultBox.style.display="block";
+ let percent=Math.round((score/questions.length)*100);
+ scoreText.innerText=`Score: ${score}/${questions.length} (${percent}%)`;
+ resultText.innerText=percent>=50?"🎉 PASS":"❌ FAIL";
+ resultText.className=percent>=50?"pass":"fail";
+
+ let cat=categorySelect.value;
+ if(!highScore[cat] || score>highScore[cat]){
+   highScore[cat]=score;
+   localStorage.setItem("quizHighScore",JSON.stringify(highScore));
+   highScoreResult.innerText=`🎯 New High Score! ${score}`;
+ } else highScoreResult.innerText=`High Score: ${highScore[cat]}`;
+
+ badgesDiv.innerHTML="";
+ if(percent==100) badgesDiv.innerHTML+='<span class="badge">🏆 Perfect Score</span>';
+ if(score/questions.length>=0.7) badgesDiv.innerHTML+='<span class="badge">⭐ Great Job</span>';
+
+ reviewDiv.innerHTML="";
+ reviewData.forEach(r=>{
+   let div=document.createElement("div"); div.classList.add("review-answer");
+   div.classList.add(r.selected===r.correct?"correct":"wrong");
+   div.innerHTML=`Q: ${r.question} <br> Your: ${r.selected} | Correct: ${r.correct}`;
+   reviewDiv.appendChild(div);
+ });
+}
+
+restart.onclick=()=>{ resultBox.style.display="none"; startBtn.style.display="inline-block"; categorySelect.style.display="inline-block"; quizBox.style.display="none"; next.style.display="none";};
+
+function toggleMode(){document.body.classList.toggle("dark");}
+function updateHighScore(){let cat=categorySelect.value; highScoreDiv.innerText="High Score: "+(highScore[cat]||0);}
+function toggleMute(){muted=!muted; muteBtn.innerText=muted?"🔈 Unmute":"🔇 Mute";}
+</script>
+
+</body>
+</html>
