@@ -60,7 +60,7 @@
 <script>
 // ✅ Stage 5 Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyBzeoHdMFZwdR2W3FAQxoGBs6rjVinL9so",
+  apiKey: 
   authDomain: "to-do-app-10cf3.firebaseapp.com",
   projectId: "to-do-app-10cf3",
   storageBucket: "to-do-app-10cf3.firebasestorage.app",
